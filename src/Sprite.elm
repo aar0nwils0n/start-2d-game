@@ -1,4 +1,4 @@
-module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, collides, collidesAny, createRect, spriteToTRBL)
+module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAny, createRect, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL)
 
 import Html exposing (Html)
 import Svg exposing (..)
@@ -60,7 +60,38 @@ createRect { width, height, x, y } =
 
 accelerateSprite : DynamicSprite -> DynamicSprite
 accelerateSprite object =
-    { object | velocityY = object.velocityY + 0.2, y = object.y + object.velocityY }
+    { object
+        | velocityY = object.velocityY + 0.2
+        , y = object.y + object.velocityY
+        , x = object.x + object.velocityX
+    }
+
+
+accelerateSpriteWithFloor : DynamicSprite -> DynamicSprite
+accelerateSpriteWithFloor object =
+    { object
+        | y =
+            if object.velocityY > 0 then
+                object.y
+
+            else
+                object.y + object.velocityY
+        , x = object.x + object.velocityX
+    }
+
+
+setSpriteVelocityX : Float -> DynamicSprite -> DynamicSprite
+setSpriteVelocityX velocity sprite =
+    { sprite
+        | velocityX = velocity
+    }
+
+
+setSpriteVelocityY : Float -> DynamicSprite -> DynamicSprite
+setSpriteVelocityY velocity sprite =
+    { sprite
+        | velocityY = velocity
+    }
 
 
 collides a b =

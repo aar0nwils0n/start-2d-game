@@ -1,4 +1,4 @@
-module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAnyBottomToTop, collidesBottomToTop, collidesWith, createRect, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL)
+module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAnyBottomToTop, collidesBottomToTop, collidesWith, createRect, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL, transformSprite)
 
 import Html exposing (Html)
 import Svg exposing (..)
@@ -67,15 +67,26 @@ accelerateSprite object =
     }
 
 
-accelerateSpriteWithFloor : DynamicSprite -> DynamicSprite
-accelerateSpriteWithFloor object =
-    { object
-        | y =
+accelerateSpriteWithFloor : DynamicSprite -> List Sprite -> DynamicSprite
+accelerateSpriteWithFloor object collidingSprites =
+    let
+        collidingSprite =
+            List.head collidingSprites
+
+        yFromBottom =
+            Maybe.map (spriteToTRBL >> .top >> (\top -> top - object.height)) collidingSprite
+                |> Maybe.withDefault object.y
+
+        ( newY, newVelocityY ) =
             if object.velocityY > 0 then
-                object.y
+                ( yFromBottom, 0 )
 
             else
-                object.y + object.velocityY
+                ( object.y + object.velocityY, object.velocityY )
+    in
+    { object
+        | y = newY
+        , velocityY = newVelocityY
         , x = object.x + object.velocityX
     }
 
@@ -112,6 +123,18 @@ collides a b =
         < rectB.bottom
 
 
+transformSprite staticSprites sprite =
+    let
+        collidingSprites =
+            collidesWith staticSprites sprite
+    in
+    if collidingSprites |> List.length |> (<) 0 then
+        accelerateSpriteWithFloor sprite collidingSprites
+
+    else
+        accelerateSprite sprite
+
+
 
 -- accelerateSprite : List (GenericSprite a) -> GenericSprite b -> Bool
 
@@ -132,7 +155,14 @@ collidesBottomToTop a b =
         rectB =
             spriteToTRBL b
     in
-    rectB.bottom >= rectA.top && rectB.top < rectA.top
+    rectB.bottom
+        >= rectA.top
+        && rectB.top
+        < rectA.top
+        && rectB.left
+        < rectA.right
+        && rectB.right
+        > rectA.left
 
 
 

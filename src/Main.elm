@@ -59,14 +59,6 @@ init _ =
     )
 
 
-transformSprite staticSprites sprite =
-    if Sprite.collidesWith staticSprites sprite |> List.length |> (<) 0 then
-        Sprite.accelerateSpriteWithFloor sprite
-
-    else
-        Sprite.accelerateSprite sprite
-
-
 setLeftRightVelocity model =
     let
         sprite =
@@ -92,7 +84,7 @@ update msg model =
         Tick ->
             ( { model
                 | playerSprite =
-                    transformSprite model.staticSprites
+                    Sprite.transformSprite model.staticSprites
                         model.playerSprite
               }
                 |> setLeftRightVelocity

@@ -1,4 +1,4 @@
-module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAny, createRect, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL)
+module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAnyBottomToTop, collidesBottomToTop, collidesWith, createRect, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL)
 
 import Html exposing (Html)
 import Svg exposing (..)
@@ -39,9 +39,9 @@ type alias TRBL =
 
 spriteToTRBL : GenericSprite a -> TRBL
 spriteToTRBL { x, y, width, height } =
-    { top = y + height
+    { top = y
     , right = x + width
-    , bottom = y
+    , bottom = y + height
     , left = x
     }
 
@@ -106,15 +106,34 @@ collides a b =
         < rectB.right
         && rectA.right
         > rectB.left
-        && rectA.top
-        > rectB.bottom
         && rectA.bottom
-        < rectB.top
+        > rectB.top
+        && rectA.top
+        < rectB.bottom
 
 
 
 -- accelerateSprite : List (GenericSprite a) -> GenericSprite b -> Bool
 
 
-collidesAny sprites spriteToCheck =
-    List.foldl (\cur agg -> agg || collides cur spriteToCheck) False sprites
+collidesWith sprites spriteToCheck =
+    List.filter (\sprite -> collides sprite spriteToCheck) sprites
+
+
+collidesAnyBottomToTop sprites spriteToCheck =
+    List.foldl (\cur agg -> agg || collidesBottomToTop cur spriteToCheck) False sprites
+
+
+collidesBottomToTop a b =
+    let
+        rectA =
+            spriteToTRBL a
+
+        rectB =
+            spriteToTRBL b
+    in
+    rectB.bottom >= rectA.top && rectB.top < rectA.top
+
+
+
+-- todo change to ==

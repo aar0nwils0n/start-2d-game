@@ -60,7 +60,7 @@ init _ =
 
 
 transformSprite staticSprites sprite =
-    if Sprite.collidesAny staticSprites sprite then
+    if Sprite.collidesWith staticSprites sprite |> List.length |> (<) 0 then
         Sprite.accelerateSpriteWithFloor sprite
 
     else
@@ -110,7 +110,7 @@ update msg model =
                 "ArrowUp" ->
                     { updatedKeysState
                         | playerSprite =
-                            if Sprite.collidesAny updatedKeysState.staticSprites updatedKeysState.playerSprite then
+                            if Sprite.collidesAnyBottomToTop updatedKeysState.staticSprites updatedKeysState.playerSprite then
                                 Sprite.setSpriteVelocityY -5 updatedKeysState.playerSprite
 
                             else

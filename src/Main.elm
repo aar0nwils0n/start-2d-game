@@ -102,7 +102,11 @@ update msg model =
                 "ArrowUp" ->
                     { updatedKeysState
                         | playerSprite =
-                            if Sprite.collidesAnyBottomToTop updatedKeysState.staticSprites updatedKeysState.playerSprite then
+                            if
+                                Sprite.collidesAnyFloor updatedKeysState.staticSprites updatedKeysState.playerSprite
+                                    |> List.length
+                                    |> (<) 0
+                            then
                                 Sprite.setSpriteVelocityY -5 updatedKeysState.playerSprite
 
                             else

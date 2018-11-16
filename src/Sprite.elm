@@ -1,4 +1,4 @@
-module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAnyBottomToTop, collidesBottomToTop, collidesWith, createRect, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL, transformSprite)
+module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAnyFloor, collidesWith, createRect, hitsFloor, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL, transformSprite)
 
 import Html exposing (Html)
 import Svg exposing (..)
@@ -67,22 +67,53 @@ accelerateSprite object =
     }
 
 
+type VelocityType
+    = Some
+    | None
+    | Negative
+
+
+floatToVelocityType velocity =
+    if velocity > 0 then
+        Some
+
+    else if velocity < 0 then
+        Negative
+
+    else
+        None
+
+
 accelerateSpriteWithFloor : DynamicSprite -> List Sprite -> DynamicSprite
 accelerateSpriteWithFloor object collidingSprites =
     let
-        collidingSprite =
-            List.head collidingSprites
+        floorSprite =
+            collidesAnyFloor collidingSprites object |> List.head
 
-        yFromBottom =
-            Maybe.map (spriteToTRBL >> .top >> (\top -> top - object.height)) collidingSprite
-                |> Maybe.withDefault object.y
+        roofSprite =
+            collidesAnyRoof collidingSprites object |> List.head
+
+        velocityType =
+            floatToVelocityType object.velocityY
 
         ( newY, newVelocityY ) =
-            if object.velocityY > 0 then
-                ( yFromBottom, 0 )
+            case ( velocityType, floorSprite, roofSprite ) of
+                ( Some, Just collidingSprite, _ ) ->
+                    let
+                        yFromBottom =
+                            collidingSprite |> spriteToTRBL |> .top |> (\top -> top - object.height)
+                    in
+                    ( yFromBottom, 0 )
 
-            else
-                ( object.y + object.velocityY, object.velocityY )
+                ( Negative, _, Just collidingSprite ) ->
+                    let
+                        yFromTop =
+                            collidingSprite |> spriteToTRBL |> .bottom
+                    in
+                    ( yFromTop, 0 )
+
+                _ ->
+                    ( object.y + object.velocityY, object.velocityY )
     in
     { object
         | y = newY
@@ -143,11 +174,19 @@ collidesWith sprites spriteToCheck =
     List.filter (\sprite -> collides sprite spriteToCheck) sprites
 
 
-collidesAnyBottomToTop sprites spriteToCheck =
-    List.foldl (\cur agg -> agg || collidesBottomToTop cur spriteToCheck) False sprites
+collidesAnyFloor =
+    collidesAny hitsFloor
 
 
-collidesBottomToTop a b =
+collidesAnyRoof =
+    collidesAny hitsRoof
+
+
+collidesAny checker sprites spriteToCheck =
+    List.filter (checker spriteToCheck) sprites
+
+
+hitsRoof a b =
     let
         rectA =
             spriteToTRBL a
@@ -155,14 +194,32 @@ collidesBottomToTop a b =
         rectB =
             spriteToTRBL b
     in
-    rectB.bottom
-        >= rectA.top
-        && rectB.top
-        < rectA.top
-        && rectB.left
-        < rectA.right
-        && rectB.right
-        > rectA.left
+    rectA.top
+        <= rectB.bottom
+        && rectA.bottom
+        > rectB.bottom
+        && rectA.left
+        < rectB.right
+        && rectA.right
+        > rectB.left
+
+
+hitsFloor a b =
+    let
+        rectA =
+            spriteToTRBL a
+
+        rectB =
+            spriteToTRBL b
+    in
+    rectA.bottom
+        >= rectB.top
+        && rectA.top
+        < rectB.top
+        && rectA.left
+        < rectB.right
+        && rectA.right
+        > rectB.left
 
 
 

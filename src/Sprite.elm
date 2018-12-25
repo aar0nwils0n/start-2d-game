@@ -1,4 +1,4 @@
-module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, accelerateSpriteWithFloor, collides, collidesAnyFloor, collidesWith, createRect, hitsFloor, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL, transformSprite)
+module Sprite exposing (DynamicSprite, GenericSprite, MovingObject, Sprite, TRBL, accelerateSprite, collides, collidesAnyFloor, collidesWith, createRect, hitsFloor, setSpriteVelocityX, setSpriteVelocityY, spriteToTRBL, transformSprite)
 
 import Html exposing (Html)
 import Svg exposing (..)
@@ -84,42 +84,84 @@ floatToVelocityType velocity =
         None
 
 
-accelerateSpriteWithFloor : DynamicSprite -> List Sprite -> DynamicSprite
-accelerateSpriteWithFloor object collidingSprites =
+calculateSpriteX : List Sprite -> DynamicSprite -> DynamicSprite
+calculateSpriteX collidingSprites object =
     let
-        floorSprite =
-            collidesAnyFloor collidingSprites object |> List.head
+        velocityTypeX =
+            floatToVelocityType object.velocityX
 
-        roofSprite =
-            collidesAnyRoof collidingSprites object |> List.head
+        leftSprite =
+            collidesAnyLeft collidingSprites object |> List.head
 
-        velocityType =
-            floatToVelocityType object.velocityY
+        rightSprite =
+            collidesAnyRight collidingSprites object |> List.head
 
-        ( newY, newVelocityY ) =
-            case ( velocityType, floorSprite, roofSprite ) of
-                ( Some, Just collidingSprite, _ ) ->
+        ( newX, newVelocityX ) =
+            case ( velocityTypeX, leftSprite, rightSprite ) of
+                ( Negative, Just collidingSprite, _ ) ->
                     let
-                        yFromBottom =
-                            collidingSprite |> spriteToTRBL |> .top |> (\top -> top - object.height)
+                        xFromLeft =
+                            collidingSprite |> spriteToTRBL |> .right
                     in
-                    ( yFromBottom, 0 )
+                    ( xFromLeft, 0 )
 
-                ( Negative, _, Just collidingSprite ) ->
+                ( Some, _, Just collidingSprite ) ->
                     let
-                        yFromTop =
-                            collidingSprite |> spriteToTRBL |> .bottom
+                        xFromRight =
+                            collidingSprite |> spriteToTRBL |> .left |> (\left -> left - object.width)
                     in
-                    ( yFromTop, 0 )
+                    ( xFromRight, 0 )
 
                 _ ->
-                    ( object.y + object.velocityY, object.velocityY )
+                    ( object.x + object.velocityX, object.velocityX )
     in
     { object
-        | y = newY
-        , velocityY = newVelocityY
-        , x = object.x + object.velocityX
+        | velocityX = newVelocityX
+        , x = newX
     }
+
+
+calculateSpriteY : List Sprite -> DynamicSprite -> DynamicSprite
+calculateSpriteY collidingSprites sprite =
+    let
+        floorSprite =
+            collidesAnyFloor collidingSprites sprite |> List.head
+
+        roofSprite =
+            collidesAnyRoof collidingSprites sprite |> List.head
+
+        velocityTypeY =
+            floatToVelocityType sprite.velocityY
+    in
+    case ( floorSprite, roofSprite ) of
+        ( Nothing, Nothing ) ->
+            accelerateSprite sprite
+
+        _ ->
+            let
+                ( newY, newVelocityY ) =
+                    case ( velocityTypeY, floorSprite, roofSprite ) of
+                        ( Some, Just collidingSprite, _ ) ->
+                            let
+                                yFromBottom =
+                                    collidingSprite |> spriteToTRBL |> .top |> (\top -> top - sprite.height)
+                            in
+                            ( yFromBottom, 0 )
+
+                        ( Negative, _, Just collidingSprite ) ->
+                            let
+                                yFromTop =
+                                    collidingSprite |> spriteToTRBL |> .bottom
+                            in
+                            ( yFromTop, 0 )
+
+                        _ ->
+                            ( sprite.y + sprite.velocityY, sprite.velocityY )
+            in
+            { sprite
+                | y = newY
+                , velocityY = newVelocityY
+            }
 
 
 setSpriteVelocityX : Float -> DynamicSprite -> DynamicSprite
@@ -160,7 +202,8 @@ transformSprite staticSprites sprite =
             collidesWith staticSprites sprite
     in
     if collidingSprites |> List.length |> (<) 0 then
-        accelerateSpriteWithFloor sprite collidingSprites
+        calculateSpriteY collidingSprites sprite
+            |> calculateSpriteX collidingSprites
 
     else
         accelerateSprite sprite
@@ -180,6 +223,14 @@ collidesAnyFloor =
 
 collidesAnyRoof =
     collidesAny hitsRoof
+
+
+collidesAnyLeft =
+    collidesAny hitsLeft
+
+
+collidesAnyRight =
+    collidesAny hitsRight
 
 
 collidesAny checker sprites spriteToCheck =
@@ -222,5 +273,37 @@ hitsFloor a b =
         > rectB.left
 
 
+hitsLeft a b =
+    let
+        rectA =
+            spriteToTRBL a
 
--- todo change to ==
+        rectB =
+            spriteToTRBL b
+    in
+    rectB.right
+        > rectA.left
+        && rectB.left
+        < rectA.left
+        && rectB.bottom
+        > rectA.top
+        && rectB.top
+        < rectA.bottom
+
+
+hitsRight a b =
+    let
+        rectA =
+            spriteToTRBL a
+
+        rectB =
+            spriteToTRBL b
+    in
+    rectB.left
+        < rectA.right
+        && rectB.right
+        > rectA.right
+        && rectB.bottom
+        > rectA.top
+        && rectB.top
+        < rectA.bottom

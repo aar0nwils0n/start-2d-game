@@ -44,9 +44,9 @@ init _ =
               , height = 10
               }
             , { x = 0
-              , y = 320
+              , y = 300
               , width = 100
-              , height = 10
+              , height = 60
               }
             , { x = 100
               , y = 280
